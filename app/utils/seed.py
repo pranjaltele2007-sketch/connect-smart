@@ -46,9 +46,8 @@ def seed_database(demo: bool = True) -> None:
 
     # 3. Admin account
     admin_user = os.getenv("SEED_ADMIN_USERNAME", "admin").strip() or "admin"
-    admin_pass = os.getenv("SEED_ADMIN_PASSWORD", "").strip()
-    if not admin_pass:
-        admin_pass = "Admin@123" if demo else "ChangeMe@2026!"
+    env_admin_pass = os.getenv("SEED_ADMIN_PASSWORD", "").strip()
+    admin_pass = env_admin_pass or ("Admin@123" if demo else "ChangeMe@2026!")
 
     admin = Admin.query.filter_by(username=admin_user).first()
     if not admin:
@@ -60,6 +59,11 @@ def seed_database(demo: bool = True) -> None:
         )
         admin.set_password(admin_pass, method=pw_method)
         db.session.add(admin)
+    elif env_admin_pass:
+        # Keep production admin password synced with SEED_ADMIN_PASSWORD on redeploy
+        admin.set_password(env_admin_pass, method=pw_method)
+        admin.failed_attempts = 0
+        admin.locked_until = None
 
     # 4. Demo Security & Host accounts (only when demo=True)
     if demo:
