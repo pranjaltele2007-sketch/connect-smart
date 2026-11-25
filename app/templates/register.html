@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Visitor Registration – SmartConnect{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card sc-card p-4 bg-white">
+      <h3 class="fw-bold mb-1">Visitor Pass Registration</h3>
+      <p class="text-muted small mb-4">No account required. Your QR pass is generated immediately.</p>
+      {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+      {% endif %}
+      <form method="post" action="/register">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Full Name *</label>
+          <input type="text" name="name" class="form-control" required maxlength="120" placeholder="e.g. Aarav Mehta">
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Mobile Number *</label>
+            <input type="tel" name="mobile" class="form-control" required placeholder="+91 9876543210">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Company / Organization</label>
+            <input type="text" name="company" class="form-control" maxlength="120" placeholder="Optional">
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Person to Meet *</label>
+            <input type="text" name="person_to_meet" class="form-control" required maxlength="120" placeholder="e.g. Prof. Vijay Andhale">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Department</label>
+            <select name="department_id" class="form-select">
+              <option value="">-- Select Department --</option>
+              {% for d in departments %}
+                <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Purpose of Visit *</label>
+          <input type="text" name="purpose" class="form-control" required maxlength="200" placeholder="e.g. Project Demo / Meeting">
+        </div>
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Generate My QR Pass</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -77,7 +77,7 @@ class BaseConfig:
     MAX_CONTENT_LENGTH = 256 * 1024  # reject request bodies > 256 KB
 
     # ---- Passwords & login protection ------------------------------------
-    PASSWORD_HASH_METHOD = "pbkdf2:sha256:600000"
+    PASSWORD_HASH_METHOD = "pbkdf2:sha256:150000"
     LOGIN_MAX_ATTEMPTS = env_int("LOGIN_MAX_ATTEMPTS", 5)
     LOGIN_LOCK_SECONDS = env_int("LOGIN_LOCK_SECONDS", 300)
     REGISTER_RATE_LIMIT = env_int("REGISTER_RATE_LIMIT", 10)      # requests ...

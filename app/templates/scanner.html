@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Gate QR Scanner – SmartConnect{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card sc-card p-4 bg-white">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0">Gate QR Scanner</h4>
+        <span id="connBadge" class="badge bg-success">Online</span>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Active Gate</label>
+        <select id="gateSelect" class="form-select form-select-sm">
+          {% for g in gates %}
+            <option value="{{ g.id }}">{{ g.name }} ({{ g.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="reader" class="border rounded bg-dark text-white text-center mb-3" style="min-height: 220px;"></div>
+      <div class="d-flex gap-2 mb-3">
+        <button id="startCamBtn" class="btn btn-primary btn-sm flex-fill">Start Camera</button>
+        <label class="btn btn-outline-secondary btn-sm flex-fill mb-0">
+          Upload QR Image <input id="qrFileInput" type="file" accept="image/*" hidden>
+        </label>
+      </div>
+
+      <div class="input-group input-group-sm mb-3">
+        <input id="manualQrInput" type="text" class="form-control" placeholder="Paste raw token or offline QR JSON...">
+        <button id="manualScanBtn" class="btn btn-dark">Verify &amp; Scan</button>
+      </div>
+
+      <div id="scanResult" class="alert d-none mb-2"></div>
+
+      <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
+        <span class="small text-muted">Offline Queue: <strong id="queueCount">0</strong> pending</span>
+        <button id="syncBtn" class="btn btn-outline-primary btn-sm">Sync Queue Now</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card sc-card p-4 bg-white">
+      <h5 class="fw-bold mb-3">Recent Gate Activity</h5>
+      <div class="list-group list-group-flush small">
+        {% for log in recent_logs %}
+          <div class="list-group-item px-0 d-flex justify-content-between">
+            <div>
+              <strong>{{ log.visitor.name if log.visitor else 'System' }}</strong>
+              <span class="badge bg-light text-dark border ms-1">{{ log.action }}</span>
+              <div class="text-muted">{{ log.details }}</div>
+            </div>
+            <span class="badge bg-secondary align-self-center">{{ log.mode }}</span>
+          </div>
+        {% else %}
+          <div class="text-muted">No recent scans.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/js/offline.js"></script>
+<script>
+  const csrf = document.querySelector('meta[name="csrf-token"]').content;
+  const resultEl = document.getElementById("scanResult");
+  const queueCountEl = document.getElementById("queueCount");
+  const connBadge = document.getElementById("connBadge");
+
+  function showResult(ok, msg) {
+    resultEl.className = "alert " + (ok ? "alert-success" : "alert-danger");
+    resultEl.textContent = msg;
+    resultEl.classList.remove("d-none");
+  }
+
+  async function refreshQueueCount() {
+    const items = await SmartConnectOffline.getQueuedScans();
+    queueCountEl.textContent = items.length;
+  }
+
+  async function processScan(qrData) {
+    const gateId = document.getElementById("gateSelect").value;
+    if (!navigator.onLine) {
+      await SmartConnectOffline.queueOfflineScan({ qr_data: qrData, gate_id: gateId });
+      await refreshQueueCount();
+      showResult(true, "Offline: scan saved locally (NOT verified yet). Will sync when online.");
+      return;
+    }
+    try {
+      const resp = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        body: JSON.stringify({ qr_data: qrData, gate_id: gateId ? Number(gateId) : null })
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        showResult(true, `${data.action.toUpperCase()}: ${data.visitor.name} (${data.visitor.status})`);
+      } else {
+        showResult(false, data.error || "Verification failed");
+      }
+    } catch (err) {
+      await SmartConnectOffline.queueOfflineScan({ qr_data: qrData, gate_id: gateId });
+      await refreshQueueCount();
+      showResult(true, "Network unreachable: saved to offline queue (NOT verified yet).");
+    }
+  }
+
+  document.getElementById("manualScanBtn").onclick = () => {
+    const val = document.getElementById("manualQrInput").value.trim();
+    if (val) processScan(val);
+  };
+
+  document.getElementById("syncBtn").onclick = async () => {
+    try {
+      const res = await SmartConnectOffline.syncOfflineQueue(csrf);
+      await refreshQueueCount();
+      if (res) showResult(true, `Synced ${res.synced} queued scan(s).`);
+    } catch (e) {
+      showResult(false, "Sync failed: " + e.message);
+    }
+  };
+
+  window.addEventListener("online", () => {
+    connBadge.className = "badge bg-success";
+    connBadge.textContent = "Online";
+    SmartConnectOffline.syncOfflineQueue(csrf).then(refreshQueueCount).catch(() => {});
+  });
+  window.addEventListener("offline", () => {
+    connBadge.className = "badge bg-warning text-dark";
+    connBadge.textContent = "Offline";
+  });
+
+  if (typeof Html5Qrcode !== "undefined") {
+    const qrScanner = new Html5Qrcode("reader");
+    document.getElementById("startCamBtn").onclick = () => {
+      qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decoded) => {
+        qrScanner.pause(true);
+        processScan(decoded).finally(() => setTimeout(() => qrScanner.resume(), 1500));
+      }).catch((e) => showResult(false, "Camera unavailable (use HTTPS or Upload QR Image): " + e));
+    };
+    document.getElementById("qrFileInput").onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      qrScanner.scanFile(file, true).then(processScan).catch((err) => showResult(false, "Could not decode QR image: " + err));
+    };
+  }
+  refreshQueueCount();
+</script>
+{% endblock %}

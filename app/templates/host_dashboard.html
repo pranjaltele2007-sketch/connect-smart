@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Host Approvals – SmartConnect{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="fw-bold mb-0">Host Approval Queue</h3>
+    <p class="text-muted small mb-0">Approve or reject incoming visitor requests in real time</p>
+  </div>
+  <span class="badge bg-success-subtle text-success-emphasis px-3 py-2">Live Socket.IO Connected</span>
+</div>
+
+<div class="card sc-card bg-white overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light small">
+        <tr>
+          <th>Visitor</th><th>Mobile / Company</th><th>Purpose</th><th>Mode</th><th>Status</th><th class="text-end">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in visitors %}
+        <tr>
+          <td class="fw-semibold">{{ v.name }}<div class="small text-muted">{{ v.transaction_id }}</div></td>
+          <td class="small">{{ v.mobile }}<div class="text-muted">{{ v.company or '-' }}</div></td>
+          <td class="small">{{ v.purpose }}<div class="text-muted">Meet: {{ v.person_to_meet }}</div></td>
+          <td><span class="badge bg-secondary">{{ v.communication_mode }}</span></td>
+          <td>
+            <span class="badge {% if v.status == 'approved' %}bg-success{% elif v.status == 'checked_in' %}bg-primary{% elif v.status == 'rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+              {{ v.status }}
+            </span>
+          </td>
+          <td class="text-end">
+            {% if v.status in ('pending', 'rejected') %}
+              <form method="post" action="/host/visitors/{{ v.id }}/approve" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-success btn-sm">Approve</button>
+              </form>
+            {% endif %}
+            {% if v.status == 'pending' %}
+              <form method="post" action="/host/visitors/{{ v.id }}/reject" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline-danger btn-sm">Reject</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center py-4 text-muted">No visitor requests yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  socket.on("visitor:registered", () => location.reload());
+  socket.on("visitor:updated", () => location.reload());
+</script>
+{% endblock %}

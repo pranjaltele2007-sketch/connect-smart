@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Your QR Pass – SmartConnect{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-5">
+    <div class="card sc-card p-4 bg-white text-center">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="badge bg-dark">TXN: {{ visitor.transaction_id }}</span>
+        <span class="badge {% if visitor.status == 'approved' %}bg-success{% elif visitor.status == 'checked_in' %}bg-primary{% elif visitor.status == 'rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+          {{ visitor.status|upper }}
+        </span>
+      </div>
+      <h4 class="fw-bold mb-1">{{ visitor.name }}</h4>
+      <p class="text-muted small mb-3">Meeting: <strong>{{ visitor.person_to_meet }}</strong> &bull; {{ visitor.purpose }}</p>
+
+      {% if qr_payload %}
+        <div class="p-3 bg-light rounded-3 d-inline-block mb-3 border">
+          <img src="/qr/image?data={{ qr_payload|urlencode }}" alt="SmartConnect QR Pass" class="img-fluid" style="max-width: 230px;">
+        </div>
+        <div class="alert alert-success small py-2 text-start">
+          <strong>Show this QR at the gate.</strong> One-time encrypted token (expires in 24h).
+        </div>
+      {% else %}
+        <div class="alert alert-info small">
+          For security, raw QR tokens are only displayed once upon issuance. Need a fresh QR? Click Reissue below.
+        </div>
+      {% endif %}
+
+      <form method="post" action="/pass/{{ visitor.visitor_uid }}/reissue" class="mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="access_key" value="{{ access_key }}">
+        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Reissue New QR Pass (Revokes Old)</button>
+      </form>
+      <a href="/pass/{{ visitor.visitor_uid }}?key={{ access_key|urlencode }}" class="btn btn-link btn-sm mt-2">Refresh Pass Status</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if access_key %}
+<script>
+  try {
+    localStorage.setItem("smartconnect_last_pass", JSON.stringify({
+      uid: "{{ visitor.visitor_uid }}",
+      key: "{{ access_key }}"
+    }));
+  } catch (e) {}
+</script>
+{% endif %}
+{% endblock %}

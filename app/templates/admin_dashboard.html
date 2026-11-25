@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard – SmartConnect{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-0">Admin Operations Dashboard</h3>
+    <p class="text-muted small mb-0">Live visitor metrics, audit trail, and network status</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/admin/network" class="btn btn-outline-dark btn-sm">Network Monitor ({{ net.ws_clients }} WS)</a>
+    <a href="/admin/export.csv" class="btn btn-primary btn-sm">Export CSV</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-2"><div class="card sc-card p-3 bg-white"><div class="small text-muted">Total</div><div class="fs-3 fw-bold">{{ stats.total }}</div></div></div>
+  <div class="col-6 col-md-2"><div class="card sc-card p-3 bg-white"><div class="small text-muted">Pending</div><div class="fs-3 fw-bold text-warning">{{ stats.pending }}</div></div></div>
+  <div class="col-6 col-md-2"><div class="card sc-card p-3 bg-white"><div class="small text-muted">Approved</div><div class="fs-3 fw-bold text-success">{{ stats.approved }}</div></div></div>
+  <div class="col-6 col-md-2"><div class="card sc-card p-3 bg-white"><div class="small text-muted">Checked In</div><div class="fs-3 fw-bold text-primary">{{ stats.checked_in }}</div></div></div>
+  <div class="col-6 col-md-2"><div class="card sc-card p-3 bg-white"><div class="small text-muted">Checked Out</div><div class="fs-3 fw-bold text-secondary">{{ stats.checked_out }}</div></div></div>
+  <div class="col-6 col-md-2"><div class="card sc-card p-3 bg-white"><div class="small text-muted">Avg Latency</div><div class="fs-3 fw-bold text-info">{{ net.avg_latency_ms }}ms</div></div></div>
+</div>
+
+<div class="card sc-card bg-white overflow-hidden">
+  <div class="card-header bg-white fw-bold py-3">Recent Visitors</div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr><th>Name</th><th>Mobile</th><th>Meet</th><th>Mode</th><th>Status</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        {% for v in visitors %}
+        <tr>
+          <td class="fw-semibold">{{ v.name }}</td>
+          <td>{{ v.mobile }}</td>
+          <td>{{ v.person_to_meet }}</td>
+          <td><span class="badge bg-dark">{{ v.communication_mode }}</span></td>
+          <td><span class="badge bg-info text-dark">{{ v.status }}</span></td>
+          <td class="text-muted">{{ v.created_at.strftime('%Y-%m-%d %H:%M') if v.created_at else '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  socket.on("visitor:registered", () => location.reload());
+  socket.on("visitor:updated", () => location.reload());
+</script>
+{% endblock %}

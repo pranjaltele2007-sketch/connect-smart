@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Manage Users – SmartConnect{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card sc-card p-4 bg-white">
+      <h5 class="fw-bold mb-3">Create Staff Account</h5>
+      <form method="post" action="/admin/users">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-2"><label class="form-label small">Username</label><input name="username" class="form-control form-control-sm" required></div>
+        <div class="mb-2"><label class="form-label small">Full Name</label><input name="full_name" class="form-control form-control-sm" required></div>
+        <div class="mb-2"><label class="form-label small">Password (min 6 chars)</label><input type="password" name="password" class="form-control form-control-sm" required minlength="6"></div>
+        <div class="mb-2">
+          <label class="form-label small">Role</label>
+          <select name="role" class="form-select form-select-sm">
+            <option value="host">Host</option>
+            <option value="security">Security Guard</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Department (for Hosts)</label>
+          <select name="department_id" class="form-select form-select-sm">
+            <option value="">None</option>
+            {% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Gate (for Security)</label>
+          <select name="gate_id" class="form-select form-select-sm">
+            <option value="">None</option>
+            {% for g in gates %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm w-100">Create User</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card sc-card bg-white overflow-hidden">
+      <div class="card-header bg-white fw-bold py-3">Registered Staff Accounts</div>
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light"><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td class="fw-semibold">{{ u.username }}</td>
+            <td>{{ u.full_name }}</td>
+            <td><span class="badge bg-dark">{{ u.role }}</span></td>
+            <td><span class="badge {% if u.is_active %}bg-success{% else %}bg-secondary{% endif %}">{{ 'Active' if u.is_active else 'Disabled' }}</span></td>
+            <td class="text-end">
+              {% if u.username != 'admin' %}
+              <form method="post" action="/admin/users/{{ u.id }}/toggle" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline-secondary btn-sm">{{ 'Disable' if u.is_active else 'Enable' }}</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

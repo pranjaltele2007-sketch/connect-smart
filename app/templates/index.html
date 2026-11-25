@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}SmartConnect – Intelligent QR Visitor Management{% endblock %}
+{% block content %}
+<div class="row align-items-center g-4 py-3">
+  <div class="col-lg-7">
+    <span class="badge bg-info-subtle text-info-emphasis px-3 py-2 rounded-pill mb-3">Dual-Mode Communication: LAN + WAN + Offline QR</span>
+    <h1 class="display-5 fw-bold text-dark mb-3">Fast, Encrypted QR Visitor Management</h1>
+    <p class="lead text-secondary mb-4">
+      Register in seconds, receive an HMAC-signed expiring QR pass, get instant host approval, and check in seamlessly over Wi-Fi, Internet, or 100% Offline QR sync.
+    </p>
+    <div class="d-flex flex-wrap gap-3">
+      <a href="/register" class="btn btn-primary btn-lg px-4 fw-semibold">Get Visitor QR Pass</a>
+      <a href="/login" class="btn btn-outline-dark btn-lg px-4">Staff / Guard Login</a>
+    </div>
+    <div id="savedPassBanner" class="alert alert-info mt-4 d-none">
+      <strong>Active Pass Found:</strong> <a id="savedPassLink" href="#" class="alert-link">Open my saved QR pass</a>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card sc-card p-4 bg-white">
+      <h5 class="fw-bold mb-3">How It Works</h5>
+      <ol class="list-group list-group-numbered list-group-flush small">
+        <li class="list-group-item px-0"><strong>Visitor Registers:</strong> Generates an expiring one-time QR pass.</li>
+        <li class="list-group-item px-0"><strong>Host Approves:</strong> Host gets real-time request & approves in 1 click.</li>
+        <li class="list-group-item px-0"><strong>Gate Scan:</strong> Guard scans QR via camera or image upload (even offline).</li>
+        <li class="list-group-item px-0"><strong>Live Admin Telemetry:</strong> Real-time Socket.IO dashboard & LAN/WAN monitor.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  try {
+    const saved = JSON.parse(localStorage.getItem("smartconnect_last_pass") || "null");
+    if (saved && saved.uid && saved.key) {
+      const banner = document.getElementById("savedPassBanner");
+      const link = document.getElementById("savedPassLink");
+      link.href = `/pass/${encodeURIComponent(saved.uid)}?key=${encodeURIComponent(saved.key)}`;
+      banner.classList.remove("d-none");
+    }
+  } catch (e) {}
+</script>
+{% endblock %}
